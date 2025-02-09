@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitHub 用户活动追踪</title>
   <style>
     body {
@@ -51,12 +52,20 @@
     .event-repo {
       color: #0366d6;
       font-weight: 500;
+      margin-right: 1em;
+      word-break: break-all;
+    }
+
+    .event-repo+div {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .event-type {
       background-color: #f3f4f6;
       padding: 2px 6px;
-      margin: 0 2px;
+      margin: 4px;
       border-radius: 12px;
       font-size: 12px;
       color: #586069;
@@ -116,23 +125,7 @@
   <div class="header">
     <div class="dropdown">
       <button class="dropdown-btn">筛选事件</button>
-      <div class="dropdown-content">
-        <label><input type="checkbox" value="WatchEvent" checked>Watch</label>
-        <label><input type="checkbox" value="PushEvent" checked>Push</label>
-        <label><input type="checkbox" value="IssuesEvent" checked>Issues</label>
-        <label><input type="checkbox" value="PullRequestEvent" checked>PR</label>
-        <label><input type="checkbox" value="PullRequestReviewEvent" checked>PRReview</label>
-        <label><input type="checkbox" value="PullRequestReviewCommentEvent" checked>PRReviewComment</label>
-        <label><input type="checkbox" value="DeleteEvent" checked>Delete</label>
-        <label><input type="checkbox" value="IssueCommentEvent" checked>IssueComment</label>
-        <label><input type="checkbox" value="CreateEvent" checked>Create</label>
-        <label><input type="checkbox" value="CommitCommentEvent" checked>CommitComment</label>
-        <label><input type="checkbox" value="MemberEvent" checked>Member</label>
-        <label><input type="checkbox" value="ForkEvent" checked>Fork</label>
-        <label><input type="checkbox" value="ReleaseEvent" checked>Release</label>
-        <label><input type="checkbox" value="GollumEvent" checked>Gollum</label>
-        <label><input type="checkbox" value="PublicEvent" checked>Public</label>
-      </div>
+      <div class="dropdown-content"></div>
     </div>
     <a href="https://github.com/liuly0322/github-follow-contributions" target="_blank"
       style="color: black; text-decoration: none;"><svg width="1.2em" height="1.2em" preserveAspectRatio="xMidYMid meet"
@@ -160,6 +153,24 @@
       ReleaseEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
       GollumEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
       PublicEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+    }
+
+    const enumEventShortNames = {
+      WatchEvent: 'Watch',
+      PushEvent: 'Push',
+      IssuesEvent: 'Issue',
+      PullRequestEvent: 'PR',
+      PullRequestReviewEvent: 'Review',
+      PullRequestReviewCommentEvent: 'PRComment',
+      DeleteEvent: 'Delete',
+      IssueCommentEvent: 'IssueComment',
+      CreateEvent: 'Create',
+      CommitCommentEvent: 'CommitComment',
+      MemberEvent: 'Member',
+      ForkEvent: 'Fork',
+      ReleaseEvent: 'Release',
+      GollumEvent: 'Gollum',
+      PublicEvent: 'Public',
     }
 
     function createUserCard(username, events) {
@@ -195,28 +206,25 @@
       for (const [repoName, eventTypes] of Object.entries(eventMap)) {
         const eventDiv = document.createElement('div');
         eventDiv.className = 'event-item';
+        eventList.appendChild(eventDiv);
 
         const repo = document.createElement('a');
         repo.className = 'event-repo';
         repo.href = `https://github.com/${repoName}`;
         repo.textContent = repoName;
         repo.target = '_blank';
+        eventDiv.appendChild(repo);
 
-        const types = eventTypes.map(type => {
+        const tagDiv = document.createElement('div');
+        const tags = eventTypes.map(type => {
           const typeSpan = document.createElement('span');
           typeSpan.className = `event-type`;
-          typeSpan.textContent = type.replace(/Event$/, '')
-          const style = enumEventTypeStyles[type];
-          if (style) {
-            Object.assign(typeSpan.style, style);
-          }
+          typeSpan.textContent = enumEventShortNames[type] || type;
+          const style = enumEventTypeStyles[type] || {};
+          Object.assign(typeSpan.style, style);
           return typeSpan;
         });
-
-        eventDiv.appendChild(repo);
-        const tagDiv = document.createElement('div');
-        types.forEach(typeSpan => tagDiv.appendChild(typeSpan));
-        eventList.appendChild(eventDiv);
+        tags.forEach(tag => tagDiv.appendChild(tag));
         eventDiv.appendChild(tagDiv);
       }
 
@@ -226,16 +234,18 @@
     }
 
     function renderData(data) {
-      const container = document.getElementById('container');
-      container.innerHTML = '';
+      const fragment = document.createDocumentFragment();
       data.forEach(userObj => {
         const username = Object.keys(userObj)[0];
         const events = userObj[username];
         if (events.length === 0) {
           return;
         }
-        container.appendChild(createUserCard(username, events));
+        fragment.appendChild(createUserCard(username, events));
       });
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+      container.appendChild(fragment);
     }
 
     function filterEvents(events, selectedEventTypes) {
@@ -253,22 +263,40 @@
       return selectedEventTypes;
     }
 
+    const dropdownContent = document.querySelector('.dropdown-content');
+    const dropdownFragment = document.createDocumentFragment();
+    for (const [eventType, _] of Object.entries(enumEventTypeStyles)) {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = eventType;
+      input.id = eventType;
+      input.checked = true;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(enumEventShortNames[eventType] || eventType));
+      dropdownFragment.appendChild(label);
+    }
+    dropdownContent.appendChild(dropdownFragment);
+
+    function filterData(data) {
+      const selectedEventTypes = getSelectedEventTypes();
+      return data.map(userObj => {
+        const username = Object.keys(userObj)[0];
+        const events = userObj[username];
+        return {
+          [username]: filterEvents(events, selectedEventTypes)
+        };
+      });
+    }
+
     (async () => {
       const data = await fetch("events.json").then(res => res.json());
-      renderData(data);
+      renderData(filterData(data));
 
       const dropdownInputs = document.querySelectorAll('.dropdown-content input');
       dropdownInputs.forEach(input => {
         input.addEventListener('change', () => {
-          const selectedEventTypes = getSelectedEventTypes();
-          const filteredData = data.map(userObj => {
-            const username = Object.keys(userObj)[0];
-            const events = userObj[username];
-            return {
-              [username]: filterEvents(events, selectedEventTypes)
-            };
-          });
-          renderData(filteredData);
+          renderData(filterData(data));
         });
       });
     })()
