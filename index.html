@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub 用户活动追踪</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 20px;
+      background-color: #f6f8fa;
+    }
+
+    .user-card {
+      background: white;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .user-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .username {
+      font-size: 20px;
+      font-weight: 600;
+      color: #24292e;
+    }
+
+    .event-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #eaecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .event-repo {
+      color: #0366d6;
+      font-weight: 500;
+    }
+
+    .event-type {
+      background-color: #f3f4f6;
+      padding: 2px 6px;
+      margin: 0 2px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #586069;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+      padding-bottom: 20px;
+    }
+
+    .dropdown-btn {
+      background-color: #0366d6;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 200px;
+      box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      margin-top: 5px;
+      border-radius: 6px;
+    }
+
+    .dropdown-content label {
+      display: block;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .dropdown-content input {
+      margin-right: 8px;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="dropdown">
+      <button class="dropdown-btn">筛选事件</button>
+      <div class="dropdown-content">
+        <label><input type="checkbox" value="WatchEvent" checked>Watch</label>
+        <label><input type="checkbox" value="PushEvent" checked>Push</label>
+        <label><input type="checkbox" value="IssuesEvent" checked>Issues</label>
+        <label><input type="checkbox" value="PullRequestEvent" checked>PR</label>
+        <label><input type="checkbox" value="PullRequestReviewEvent" checked>PRReview</label>
+        <label><input type="checkbox" value="PullRequestReviewCommentEvent" checked>PRReviewComment</label>
+        <label><input type="checkbox" value="DeleteEvent" checked>Delete</label>
+        <label><input type="checkbox" value="IssueCommentEvent" checked>IssueComment</label>
+        <label><input type="checkbox" value="CreateEvent" checked>Create</label>
+        <label><input type="checkbox" value="CommitCommentEvent" checked>CommitComment</label>
+        <label><input type="checkbox" value="MemberEvent" checked>Member</label>
+        <label><input type="checkbox" value="ForkEvent" checked>Fork</label>
+        <label><input type="checkbox" value="ReleaseEvent" checked>Release</label>
+        <label><input type="checkbox" value="GollumEvent" checked>Gollum</label>
+        <label><input type="checkbox" value="PublicEvent" checked>Public</label>
+      </div>
+    </div>
+    <a href="https://github.com/liuly0322/github-follow-contributions" target="_blank"
+      style="color: black; text-decoration: none;"><svg width="1.2em" height="1.2em" preserveAspectRatio="xMidYMid meet"
+        viewBox="0 0 1024 1024" style="font-size: xx-large;">
+        <path fill="currentColor"
+          d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5C64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9c26.4 39.1 77.9 32.5 104 26c5.7-23.5 17.9-44.5 34.7-60.8c-140.6-25.2-199.2-111-199.2-213c0-49.5 16.3-95 48.3-131.7c-20.4-60.5 1.9-112.3 4.9-120c58.1-5.2 118.5 41.6 123.2 45.3c33-8.9 70.7-13.6 112.9-13.6c42.4 0 80.2 4.9 113.5 13.9c11.3-8.6 67.3-48.8 121.3-43.9c2.9 7.7 24.7 58.3 5.5 118c32.4 36.8 48.9 82.7 48.9 132.3c0 102.2-59 188.1-200 212.9a127.5 127.5 0 0 1 38.1 91v112.5c.8 9 0 17.9 15 17.9c177.1-59.7 304.6-227 304.6-424.1c0-247.2-200.4-447.3-447.5-447.3z">
+        </path>
+      </svg></a>
+  </div>
+  <div id="container"></div>
+  <script>
+    const enumEventTypeStyles = {
+      WatchEvent: { backgroundColor: '#e3fcec', color: '#026034' },
+      PushEvent: { backgroundColor: '#ddf4ff', color: '#0550ae' },
+      IssuesEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+      PullRequestEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      PullRequestReviewEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      PullRequestReviewCommentEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      DeleteEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+      IssueCommentEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+      CreateEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      CommitCommentEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+      MemberEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      ForkEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      ReleaseEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      GollumEvent: { backgroundColor: '#f0f8ff', color: '#0366d6' },
+      PublicEvent: { backgroundColor: '#f1f8ff', color: '#0366d6' },
+    }
+
+    function createUserCard(username, events) {
+      const card = document.createElement('div');
+      card.className = 'user-card';
+
+      const header = document.createElement('div');
+      header.className = 'user-header';
+
+      const avatar = document.createElement('img');
+      avatar.className = 'avatar';
+      avatar.src = `https://github.com/${username}.png`;
+      avatar.alt = `${username}的头像`;
+
+      const name = document.createElement('div');
+      name.className = 'username';
+      name.textContent = username;
+
+      header.appendChild(avatar);
+      header.appendChild(name);
+
+      const eventList = document.createElement('div');
+      const eventMap = {};
+
+      events.forEach(event => {
+        const [repoName, eventType] = event;
+        if (!eventMap[repoName]) {
+          eventMap[repoName] = [];
+        }
+        eventMap[repoName].push(eventType);
+      });
+
+      for (const [repoName, eventTypes] of Object.entries(eventMap)) {
+        const eventDiv = document.createElement('div');
+        eventDiv.className = 'event-item';
+
+        const repo = document.createElement('a');
+        repo.className = 'event-repo';
+        repo.href = `https://github.com/${repoName}`;
+        repo.textContent = repoName;
+        repo.target = '_blank';
+
+        const types = eventTypes.map(type => {
+          const typeSpan = document.createElement('span');
+          typeSpan.className = `event-type`;
+          typeSpan.textContent = type.replace(/Event$/, '')
+          const style = enumEventTypeStyles[type];
+          if (style) {
+            Object.assign(typeSpan.style, style);
+          }
+          return typeSpan;
+        });
+
+        eventDiv.appendChild(repo);
+        const tagDiv = document.createElement('div');
+        types.forEach(typeSpan => tagDiv.appendChild(typeSpan));
+        eventList.appendChild(eventDiv);
+        eventDiv.appendChild(tagDiv);
+      }
+
+      card.appendChild(header);
+      card.appendChild(eventList);
+      return card;
+    }
+
+    function renderData(data) {
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+      data.forEach(userObj => {
+        const username = Object.keys(userObj)[0];
+        const events = userObj[username];
+        if (events.length === 0) {
+          return;
+        }
+        container.appendChild(createUserCard(username, events));
+      });
+    }
+
+    function filterEvents(events, selectedEventTypes) {
+      return events.filter(event => selectedEventTypes.includes(event[1]));
+    }
+
+    function getSelectedEventTypes() {
+      const checkboxes = document.querySelectorAll('.dropdown-content input');
+      const selectedEventTypes = [];
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedEventTypes.push(checkbox.value);
+        }
+      });
+      return selectedEventTypes;
+    }
+
+    (async () => {
+      const data = await fetch("events.json").then(res => res.json());
+      renderData(data);
+
+      const dropdownInputs = document.querySelectorAll('.dropdown-content input');
+      dropdownInputs.forEach(input => {
+        input.addEventListener('change', () => {
+          const selectedEventTypes = getSelectedEventTypes();
+          const filteredData = data.map(userObj => {
+            const username = Object.keys(userObj)[0];
+            const events = userObj[username];
+            return {
+              [username]: filterEvents(events, selectedEventTypes)
+            };
+          });
+          renderData(filteredData);
+        });
+      });
+    })()
+  </script>
+</body>
+</html>
